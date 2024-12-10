@@ -1,0 +1,17 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq_container
+    environment:
+      RABBITMQ_DEFAULT_USER: GabrielP
+      RABBITMQ_DEFAULT_PASS: 2146
+    ports:
+      - "15672:15672"  # Interfaz de administración (puedes acceder desde el navegador)
+      - "5672:5672"    # Puerto para conexión de clientes
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  rabbitmq_data:
+    driver: local
