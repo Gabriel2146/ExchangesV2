@@ -1,5 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
+
+import pika
 from producers.notification_topic import send_notification_topic
 
 
