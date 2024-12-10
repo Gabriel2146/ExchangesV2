@@ -6,13 +6,14 @@ def send_notification_topic(message, routing_key):
     connection = get_connection()
     channel = connection.channel()
 
-    # Publicar mensaje en el exchange 'notificaciones_exchange'
+    # Publicar mensaje en el exchange 'notificaciones_exchange' (Topic)
     channel.basic_publish(exchange='notificaciones_exchange',
                           routing_key=routing_key,  # Clave de enrutamiento
-                          body=message)
+                          body=message)  # Mensaje a enviar
 
-    print(f"Mensaje enviado: {message} con routing key: {routing_key}")
+    print(f"Mensaje enviado al exchange 'topic': {message} con routing key: {routing_key}")
     connection.close()
 
 if __name__ == "__main__":
+    # Ejemplo de uso: enviar un mensaje con routing_key 'notificaciones.emergencia'
     send_notification_topic("¡Alerta! Nueva notificación importante.", "notificaciones.emergencia")
