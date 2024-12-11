@@ -1,24 +1,36 @@
 import pika
-from config.rabbitmq_config import get_connection
-
-def callback_email(ch, method, properties, body):
-    """Procesa el mensaje recibido para notificaciones por email."""
-    print(f"Recibido por email: {body.decode()}")
 
 def consume_email():
-    """Consume mensajes del exchange tipo 'topic' con routing key 'notificaciones.email'."""
-    connection = get_connection()
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host="localhost",
+            virtual_host="exchanges_vhost",
+            credentials=pika.PlainCredentials("GabrielP", "2146")
+        )
+    )
     channel = connection.channel()
+    queue_name = "email_queue"
 
-    # Declarar cola y enlace al exchange 'notificaciones_exchange'
-    channel.queue_declare(queue='email_queue')
-    channel.queue_bind(exchange='notificaciones_exchange', queue='email_queue', routing_key='notificaciones.email')
+    # Declarar la cola en caso de que no exista
+    channel.queue_declare(queue=queue_name, durable=True)
 
-    # Consumiendo mensajes
-    channel.basic_consume(queue='email_queue', on_message_callback=callback_email, auto_ack=True)
+    print(f"[EMAIL] Esperando mensajes en '{queue_name}'. Presiona Ctrl+C para salir.")
 
-    print('Esperando mensajes por email. Para salir presiona Ctrl+C')
-    channel.start_consuming()
+    # Callback para procesar los mensajes
+    def callback(ch, method, properties, body):
+        print(f"[EMAIL] Mensaje recibido: {body.decode()}")
+        # Confirma que el mensaje fue procesado
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    # Consumir mensajes de la cola
+    channel.basic_consume(queue=queue_name, on_message_callback=callback)
+
+    # Iniciar el consumo
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        print("\n[EMAIL] Consumidor detenido.")
+        connection.close()
 
 if __name__ == "__main__":
     consume_email()

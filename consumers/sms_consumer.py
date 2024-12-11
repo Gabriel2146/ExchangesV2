@@ -1,24 +1,36 @@
 import pika
-from config.rabbitmq_config import get_connection
-
-def callback_sms(ch, method, properties, body):
-    """Procesa el mensaje recibido para notificaciones por SMS."""
-    print(f"Recibido por SMS: {body.decode()}")
 
 def consume_sms():
-    """Consume mensajes del exchange tipo 'direct' con routing key 'canal.sms'."""
-    connection = get_connection()
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host="localhost",
+            virtual_host="exchanges_vhost",
+            credentials=pika.PlainCredentials("GabrielP", "2146")
+        )
+    )
     channel = connection.channel()
+    queue_name = "sms_queue"
 
-    # Declarar cola y enlace al exchange 'canal_exchange'
-    channel.queue_declare(queue='sms_queue')
-    channel.queue_bind(exchange='canal_exchange', queue='sms_queue', routing_key='canal.sms')
+    # Declarar la cola en caso de que no exista
+    channel.queue_declare(queue=queue_name, durable=True)
 
-    # Consumiendo mensajes
-    channel.basic_consume(queue='sms_queue', on_message_callback=callback_sms, auto_ack=True)
+    print(f"[SMS] Esperando mensajes en '{queue_name}'. Presiona Ctrl+C para salir.")
 
-    print('Esperando mensajes por SMS. Para salir presiona Ctrl+C')
-    channel.start_consuming()
+    # Callback para procesar los mensajes
+    def callback(ch, method, properties, body):
+        print(f"[SMS] Mensaje recibido: {body.decode()}")
+        # Confirma que el mensaje fue procesado
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    # Consumir mensajes de la cola
+    channel.basic_consume(queue=queue_name, on_message_callback=callback)
+
+    # Iniciar el consumo
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        print("\n[SMS] Consumidor detenido.")
+        connection.close()
 
 if __name__ == "__main__":
     consume_sms()
